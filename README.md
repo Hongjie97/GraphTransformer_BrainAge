@@ -9,6 +9,6 @@ python BrainNetwork.py
 ```
 
 ```
-# model testing
+# model testing for brain age estimation
 python main.py
 ```
