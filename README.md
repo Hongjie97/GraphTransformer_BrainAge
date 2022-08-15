@@ -6,6 +6,9 @@
 ```
 # brain network construction
 python BrainNetwork.py
+```
+
+```
 # model testing
 python main.py
 ```
