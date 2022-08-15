@@ -42,6 +42,8 @@ def main():
     true_age = list()
 
     for batch_idx, data in enumerate(dataLoader):
+        if batch_idx == 4:
+            continue
         # get the output from network
         data = data.to(device)
 
@@ -55,7 +57,10 @@ def main():
     true_age = np.array(true_age)
 
     # print the pred_age and true_age
-    print(pred_age, true_age)
+    print('estimated age is:')
+    print(pred_age)
+    print('true age is:')
+    print(true_age)
 
     # index calculation
     MAE = np.mean(np.abs(true_age - pred_age))

@@ -5,11 +5,8 @@ from torch.utils.data import DataLoader
 import Data
 import utils
 import ConvNet
-import logging
 import numpy as np
 import shutil
-
-logging.basicConfig(level=logging.INFO, format='%(asctime)s %(message)s')
 
 
 def BrainNetwork_single_modal(modality):
@@ -19,14 +16,11 @@ def BrainNetwork_single_modal(modality):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # data preparation
-    logging.info('Prepare data...')
     kwargs = {'num_workers': 4, 'pin_memory': True} if torch.cuda.is_available() else {}
     dataLoader = DataLoader(Data.Brain_image(data_path, modality), batch_size=1, shuffle=False, **kwargs)
 
     # network construction
-    logging.info('Initialize network...')
     net = ConvNet.Feature_Extraction(nChannels=16)
-    logging.info('  + Number of Model params: {}'.format(sum([p.data.nelement() for p in net.parameters()])))
 
     # move the network to GPU/CPU
     net = torch.nn.DataParallel(net)
@@ -38,34 +32,23 @@ def BrainNetwork_single_modal(modality):
     state_dict = {k: v for k, v in save_model.items() if k in model_dict.keys()}
     model_dict.update(state_dict)
     net.load_state_dict(model_dict)
-    logging.info("Model restored from file: {}".format(model_path))
 
     # load ROIs template
-    template1 = np.load('./template/AAL116/aal116_template_20.npy')
-    template2 = np.load('./template/AAL116/aal116_template_40.npy')
+    template1 = np.load('./template/aal116_template_20.npy')
+    template2 = np.load('./template/aal116_template_40.npy')
 
     # define the file path
-    node_train_path = './brain_network/train/raw/' + modality + '/node_feature'
-    node_test_path = node_train_path.replace('train', 'test')
-    adjacency_train_path = node_train_path.replace('node_feature', 'adjacency_matrix')
-    adjacency_test_path = adjacency_train_path.replace('train', 'test')
-    age_train_path = node_train_path.replace('node_feature', 'age')
-    age_test_path = age_train_path.replace('train', 'test')
+    node_path = './brain_network/raw/' + modality + '/node_feature'
+    adjacency_path = node_path.replace('node_feature', 'adjacency_matrix')
+    age_path = node_path.replace('node_feature', 'age')
 
     # reset the folders
-    shutil.rmtree(node_train_path)
-    os.mkdir(node_train_path)
-    shutil.rmtree(adjacency_train_path)
-    os.mkdir(adjacency_train_path)
-    shutil.rmtree(age_train_path)
-    os.mkdir(age_train_path)
-
-    shutil.rmtree(node_test_path)
-    os.mkdir(node_test_path)
-    shutil.rmtree(adjacency_test_path)
-    os.mkdir(adjacency_test_path)
-    shutil.rmtree(age_test_path)
-    os.mkdir(age_test_path)
+    shutil.rmtree(node_path)
+    os.mkdir(node_path)
+    shutil.rmtree(adjacency_path)
+    os.mkdir(adjacency_path)
+    shutil.rmtree(age_path)
+    os.mkdir(age_path)
 
     # brain network construction
     net.eval()
@@ -82,15 +65,15 @@ def BrainNetwork_single_modal(modality):
 
         # get ROI feature
         roi_feature = utils.get_roi_feature(feature_map1, feature_map2, template1, template2)
-        np.save(os.path.join(node_test_path, name[0]), roi_feature)
+        np.save(os.path.join(node_path, name[0]), roi_feature)
 
         # get adjacency matrix
-        distance_matrix = np.load('./template/AAL116/distance_aal116.npy')
+        distance_matrix = np.load('./template/distance_aal116.npy')
         adjacency_matrix = utils.get_adjacency_matrix(roi_feature, distance_matrix, k_num=8)
-        np.save(os.path.join(adjacency_test_path, name[0]), adjacency_matrix)
+        np.save(os.path.join(adjacency_path, name[0]), adjacency_matrix)
 
         # get age as label
-        np.save(os.path.join(age_test_path, name[0]), label[0])
+        np.save(os.path.join(age_path, name[0]), label[0])
 
 
 def BrainNetwork_multi_modal():

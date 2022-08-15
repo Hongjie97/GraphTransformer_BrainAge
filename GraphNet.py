@@ -7,9 +7,11 @@ from torch_geometric.nn import global_mean_pool as gap, global_max_pool as gmp
 class Graph_Transformer(nn.Module):
     def __init__(self, input_dim, heads, hidden_dim):
         super(Graph_Transformer, self).__init__()
-        self.graph_conv = TransformerConv(input_dim, input_dim // heads, heads=heads)
+        #  Multi-head self-attention
+        self.graph_conv = TransformerConv(input_dim, input_dim // heads, heads)
         self.lin_out = nn.Linear(input_dim, input_dim)
 
+        # Feed Forward Network
         self.ln1 = nn.LayerNorm(input_dim)
         self.ln2 = nn.LayerNorm(input_dim)
         self.lin1 = nn.Linear(input_dim, hidden_dim)
@@ -17,8 +19,10 @@ class Graph_Transformer(nn.Module):
         self.act = nn.ReLU()
 
     def forward(self, x, edge):
+        #  Multi-head self-attention
         output1 = self.lin_out(self.graph_conv(x, edge))
 
+        # Feed Forward Network
         output2 = self.ln1(output1 + x)
         output3 = self.lin2(self.act(self.lin1(output2)))
         output4 = self.ln2(output3 + output2)

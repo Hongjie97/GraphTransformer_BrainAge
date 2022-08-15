@@ -103,6 +103,6 @@ class Brain_network(graph_dataset):
         return len(os.listdir(self.processed_dir)) - 2
 
     def get(self, idx):
-        # get each data
+        # get each graph data
         data = torch.load(os.path.join(self.processed_dir, f'data_{idx}.pt'))
         return data

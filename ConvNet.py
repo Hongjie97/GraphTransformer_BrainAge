@@ -60,6 +60,7 @@ class ConvAutoEncoder(nn.Module):
 class Feature_Extraction(nn.Module):
     def __init__(self, nChannels):
         super(Feature_Extraction, self).__init__()
+        # Encoder for feature extraction
         self.Conv1 = ConvBlock(1, nChannels)
         self.Conv2 = ConvBlock(nChannels, nChannels * 2)
         self.Conv3 = ConvBlock(nChannels * 2, nChannels * 4)
