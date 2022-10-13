@@ -1,5 +1,5 @@
 ﻿import os
-os.environ['CUDA_VISIBLE_DEVICES'] = '1'
+os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 import torch
 from torch_geometric.data import DataLoader
 import Data
