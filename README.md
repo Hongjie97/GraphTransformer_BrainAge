@@ -1,7 +1,9 @@
 # Graph Transformer Geometric Learning of Brain Networks Using Multi-modal MR Images for Brain Age Estimation
 
+Source codes for the paper "Graph Transformer Geometric Learning of Brain Networks Using Multimodal MR Images for Brain Age Estimation", IEEE transactions on Medical Imaging, 2022
+
 - ### **Framework Overview:**
-![figure1](https://user-images.githubusercontent.com/56855485/180636338-3c035341-ae77-4e0c-a969-2a15ca8053c1.png)
+![figure1](https://user-images.githubusercontent.com/56855485/203496791-ac636344-f7fd-403a-baf8-9354b4538877.png)
 
 - ### **Testing Command:**
 ```
