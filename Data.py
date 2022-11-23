@@ -14,13 +14,13 @@ class Brain_image(image_dataset):
         self.image_list, self.label_list, self.name_list = self.get_data()
 
     def __getitem__(self, index):
-        # get each data and label
+        # get item by index
         image, label, name = np.load(self.image_list[index]), np.load(self.label_list[index]), self.name_list[index]
 
-        # Transform to Tensor
+        # transform numpy to tensor
         image = torch.from_numpy(image)
 
-        # add channel dimension
+        # add channel dimension for image
         image = torch.unsqueeze(image, dim=0)
 
         return image, label, name
@@ -33,14 +33,15 @@ class Brain_image(image_dataset):
         label_list = list()
         name_list = list()
 
-        # define data and label path
+        # define file paths
         image_path = os.path.join(self.data_path, str(self.modality))
         label_path = os.path.join(self.data_path, 'Age')
 
-        data_dir = os.listdir(image_path)
+        sub_dir = os.listdir(image_path)
+        sub_dir.sort(key=lambda x: int(x[:-4]))
 
         # load data and label
-        for name in data_dir:
+        for name in sub_dir:
             image = os.path.join(image_path, name)
             label = os.path.join(label_path, name)
             image_list.append(image)
@@ -66,43 +67,47 @@ class Brain_network(graph_dataset):
         pass
 
     def process(self):
-        modality = 'Fusion'
-        idx = 0
-        # define data and label path
-        node_path = os.path.join(self.raw_dir, modality + '/node_feature')
-        edge_path = os.path.join(self.raw_dir, modality + '/adjacency_matrix')
-        label_path = os.path.join(self.raw_dir, modality + '/age')
+        # define file paths
+        node_path = os.path.join(self.raw_dir, 'Fusion/node_feature')
+        adjacency_path = os.path.join(self.raw_dir, 'Fusion/adjacency_matrix')
+        age_path = os.path.join(self.raw_dir, 'Fusion/age')
 
-        data_dir = os.listdir(label_path)
-        data_dir.sort(key=lambda x: int(x[:-4]))
+        sub_dir = os.listdir(node_path)
+        sub_dir.sort(key=lambda x: int(x[:-4]))
 
         # load data and label
-        for name in data_dir:
+        index = 0
+        for name in sub_dir:
             node_feature = np.load(os.path.join(node_path, name))
-            adjacency_matrix = np.load(os.path.join(edge_path, name))
-            label = np.load(os.path.join(label_path, name))
+            adjacency_matrix = np.load(os.path.join(adjacency_path, name))
+            age = np.load(os.path.join(age_path, name))
 
+            # get edges from adjacency matrix
             edge_index = utils.get_edge(adjacency_matrix)
+
+            # transform numpy to tensor
             edge_index = torch.from_numpy(edge_index)
             node_feature = torch.from_numpy(node_feature)
-            label = torch.from_numpy(label)
+            label = torch.from_numpy(age)
 
             # obtain graph data
-            data = Data(x=node_feature, y=label, edge_index=edge_index)
+            graph_data = Data(x=node_feature, y=label, edge_index=edge_index)
 
-            if self.pre_filter is not None and not self.pre_filter(data):
+            # graph data preprocessing
+            if self.pre_filter is not None and not self.pre_filter(graph_data):
                 continue
 
             if self.pre_transform is not None:
-                data = self.pre_transform(data)
+                graph_data = self.pre_transform(graph_data)
 
-            torch.save(data, os.path.join(self.processed_dir, f'data_{idx}.pt'))
-            idx += 1
+            # save graph data
+            torch.save(graph_data, os.path.join(self.processed_dir, f'data_{index}.pt'))
+            index += 1
 
     def len(self):
         return len(os.listdir(self.processed_dir)) - 2
 
-    def get(self, idx):
-        # get each graph data
-        data = torch.load(os.path.join(self.processed_dir, f'data_{idx}.pt'))
-        return data
+    def get(self, index):
+        # get graph data by index
+        graph_data = torch.load(os.path.join(self.processed_dir, f'data_{index}.pt'))
+        return graph_data
