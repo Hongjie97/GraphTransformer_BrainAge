@@ -1,4 +1,4 @@
-﻿import os
+import os
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 import torch
 from torch_geometric.data import DataLoader
@@ -7,10 +7,11 @@ import GraphNet
 import logging
 import numpy as np
 
+
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(message)s')
 
 def main():
-    # some experiment settings
+    # experiment settings
     model_path = './trained/GCN'
     data_path = './brain_network'
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -36,17 +37,15 @@ def main():
     net.load_state_dict(model_dict)
     logging.info("Model restored from file: {}".format(model_path))
 
-    # testing for samples
+    # samples testing
     net.eval()
     pred_age = list()
     true_age = list()
 
     for batch_idx, data in enumerate(dataLoader):
-        if batch_idx == 4:
-            continue
-        # get the output from network
         data = data.to(device)
 
+        # get output from network
         with torch.no_grad():
             output = net(data)
 
@@ -56,20 +55,17 @@ def main():
     pred_age = np.array(pred_age)
     true_age = np.array(true_age)
 
-    # print the pred_age and true_age
-    print('estimated age is:')
+    # print the prediction results
+    print('The estimated age of testing samples are:')
     print(pred_age)
-    print('true age is:')
+    print('The true age of testing samples are:')
     print(true_age)
 
-    # index calculation
+    # calculate performance indicators
     MAE = np.mean(np.abs(true_age - pred_age))
     RMSE = np.sqrt(np.mean(np.square(true_age - pred_age)))
-
-    # print the test results
     logging.info('MAE: {:.8f} \t RMSE: {:.8f}'.format(MAE, RMSE))
+
 
 if __name__ == '__main__':
     main()
-
-
