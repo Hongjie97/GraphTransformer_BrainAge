@@ -5,12 +5,15 @@ from torch.utils.data import DataLoader
 import Data
 import utils
 import ConvNet
+import logging
 import numpy as np
 import shutil
 
 
+logging.basicConfig(level=logging.INFO, format='%(asctime)s %(message)s')
+
 def BrainNetwork_single_modal(modality):
-    # some experiment settings
+    # experiment settings
     model_path = './trained/CAE'
     data_path = './data'
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -33,16 +36,16 @@ def BrainNetwork_single_modal(modality):
     model_dict.update(state_dict)
     net.load_state_dict(model_dict)
 
-    # load ROIs template
-    template1 = np.load('./template/aal116_template_20.npy')
-    template2 = np.load('./template/aal116_template_40.npy')
+    # load ROI template
+    template_s = np.load('./template/aal90_template_20x24x20.npy')
+    template_m = np.load('./template/aal90_template_40x48x40.npy')
 
-    # define the file path
+    # define file paths
     node_path = './brain_network/raw/' + modality + '/node_feature'
     adjacency_path = node_path.replace('node_feature', 'adjacency_matrix')
     age_path = node_path.replace('node_feature', 'age')
 
-    # reset the folders
+    # reset folders
     shutil.rmtree(node_path)
     os.mkdir(node_path)
     shutil.rmtree(adjacency_path)
@@ -52,78 +55,79 @@ def BrainNetwork_single_modal(modality):
 
     # brain network construction
     net.eval()
-
-    # for sample data
     for batch_idx, (image, label, name) in enumerate(dataLoader):
-        # obtain feature maps from network
         image = image.to(device)
 
+        # obtain feature maps from network
         with torch.no_grad():
-            feature_map1, feature_map2 = net(image)
-        feature_map1 = feature_map1.cpu().detach().numpy().squeeze()
-        feature_map2 = feature_map2.cpu().detach().numpy().squeeze()
+            feature_map_s, feature_map_m = net(image)
 
-        # get ROI feature
-        roi_feature = utils.get_roi_feature(feature_map1, feature_map2, template1, template2)
+        feature_map_s = feature_map_s.cpu().detach().numpy().squeeze()
+        feature_map_m = feature_map_m.cpu().detach().numpy().squeeze()
+
+        # get ROI feature as node features
+        roi_feature = utils.get_roi_feature(feature_map_s, feature_map_m, template_s, template_m)
         np.save(os.path.join(node_path, name[0]), roi_feature)
 
         # get adjacency matrix
-        distance_matrix = np.load('./template/distance_aal116.npy')
+        distance_matrix = np.load('./template/aal90_distance_matrix.npy')
         adjacency_matrix = utils.get_adjacency_matrix(roi_feature, distance_matrix, k_num=8)
         np.save(os.path.join(adjacency_path, name[0]), adjacency_matrix)
 
-        # get age as label
+        # get subject age
         np.save(os.path.join(age_path, name[0]), label[0])
+
+    logging.info('Brain network construction of {} modality is completed.'.format(modality))
 
 
 def BrainNetwork_multi_modal():
-    # define the file path
+    # define file paths
     mri_path = './brain_network/raw/MRI'
     dti_path = './brain_network/raw/DTI'
     fusion_path = './brain_network/raw/Fusion'
 
-    mri_path_node = os.path.join(mri_path, 'node_feature')
-    dti_path_node = os.path.join(dti_path, 'node_feature')
-    fusion_path_node = os.path.join(fusion_path, 'node_feature')
+    mri_node_path = os.path.join(mri_path, 'node_feature')
+    dti_node_path = os.path.join(dti_path, 'node_feature')
+    fusion_node_path = os.path.join(fusion_path, 'node_feature')
 
-    mri_path_adjacency = os.path.join(mri_path, 'adjacency_matrix')
-    dti_path_adjacency = os.path.join(dti_path, 'adjacency_matrix')
-    fusion_path_adjacency = os.path.join(fusion_path, 'adjacency_matrix')
+    mri_adjacency_path = os.path.join(mri_path, 'adjacency_matrix')
+    dti_adjacency_path = os.path.join(dti_path, 'adjacency_matrix')
+    fusion_adjacency_path = os.path.join(fusion_path, 'adjacency_matrix')
 
-    mri_path_age = os.path.join(mri_path, 'age')
-    dti_path_age = os.path.join(dti_path, 'age')
-    fusion_path_age = os.path.join(fusion_path, 'age')
+    mri_age_path = os.path.join(mri_path, 'age')
+    dti_age_path = os.path.join(dti_path, 'age')
+    fusion_age_path = os.path.join(fusion_path, 'age')
 
     # reset folders
-    shutil.rmtree(os.path.join(fusion_path, 'node_feature'))
-    os.mkdir(os.path.join(fusion_path, 'node_feature'))
-    shutil.rmtree(os.path.join(fusion_path, 'adjacency_matrix'))
-    os.mkdir(os.path.join(fusion_path, 'adjacency_matrix'))
-    shutil.rmtree(os.path.join(fusion_path, 'age'))
-    os.mkdir(os.path.join(fusion_path, 'age'))
+    shutil.rmtree(fusion_node_path)
+    os.mkdir(fusion_node_path)
+    shutil.rmtree(fusion_adjacency_path)
+    os.mkdir(fusion_adjacency_path)
+    shutil.rmtree(fusion_age_path)
+    os.mkdir(fusion_age_path)
 
     # combine node features
-    sub_dir = os.listdir(mri_path_node)
+    sub_dir = os.listdir(mri_node_path)
     for name in sub_dir:
-        mri_node_feature = np.load(os.path.join(mri_path_node, name))
-        dti_node_feature = np.load(os.path.join(dti_path_node, name))
+        mri_node_feature = np.load(os.path.join(mri_node_path, name))
+        dti_node_feature = np.load(os.path.join(dti_node_path, name))
         fusion_node_feature = np.concatenate((mri_node_feature, dti_node_feature), axis=0)
-        np.save(os.path.join(fusion_path_node, name), fusion_node_feature)
+        np.save(os.path.join(fusion_node_path, name), fusion_node_feature)
 
-    # calculate adjacency matrix
-    sub_dir = os.listdir(mri_path_adjacency)
-
+    # combine adjacency matrix
+    sub_dir = os.listdir(mri_adjacency_path)
     for name in sub_dir:
-        mri_adj_matrix = np.load(os.path.join(mri_path_adjacency, name))
-        dti_adj_matrix = np.load(os.path.join(dti_path_adjacency, name))
-        fusion_adj_matrix = utils.combine_matrix_modality(mri_adj_matrix, dti_adj_matrix, k_num=8)
-        np.save(os.path.join(fusion_path_adjacency, name), fusion_adj_matrix)
+        mri_adj_matrix = np.load(os.path.join(mri_adjacency_path, name))
+        dti_adj_matrix = np.load(os.path.join(dti_adjacency_path, name))
+        fusion_adj_matrix = utils.combine_modality_matrix(mri_adj_matrix, dti_adj_matrix, k_num=8)
+        np.save(os.path.join(fusion_adjacency_path, name), fusion_adj_matrix)
 
     # get subject age
-    sub_dir = os.listdir(mri_path_age)
-
+    sub_dir = os.listdir(mri_age_path)
     for name in sub_dir:
-        shutil.copy(os.path.join(dti_path_age, name), os.path.join(fusion_path_age, name))
+        shutil.copy(os.path.join(dti_age_path, name), os.path.join(fusion_age_path, name))
+
+    logging.info('Multimodal brain network construction is completed.')
 
 
 if __name__ == '__main__':
@@ -133,5 +137,5 @@ if __name__ == '__main__':
     # brain network construction for DTI
     BrainNetwork_single_modal(modality='DTI')
 
-    # multi-modality brain network construction
+    # multimodal brain network construction
     BrainNetwork_multi_modal()
